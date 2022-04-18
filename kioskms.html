@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      * {
+        margin: 0px;
+        padding: 0px;
+        overflow: hidden;
+      }
+    </style>
+    <script src="jquery-3.6.0.min.js"></script>
+    <script>
+      function api(httpmethod, path) {
+        $.ajax({
+          url: 'http://127.0.0.1:8401/'+path,
+          type: httpmethod,
+          async: false,
+        });
+      }
+      $(document).ready( function () {
+        var video = $('<video />', {
+          id: 'video',
+          src: window.location.search.substring(1),
+          type: 'video/mp4',
+          controls: false
+        }).appendTo('body');
+      });
+      $(document).keypress(function(e) {
+        if(e.which == 13) {
+              $('video').trigger('play');
+          $('video').on('ended', function(event) {
+                    api('get','next');
+          });
+        }
+      });
+    </script>
+  </head>
+  <body/>
+</html>

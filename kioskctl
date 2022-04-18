@@ -1,0 +1,44 @@
+#!/bin/bash
+
+help () {
+  echo -e " Usage: kioskctl [option]\n Options:
+    rw       Disable ReadOnly mode
+    ro       Enable ReadOnly mode
+    stop     Stop services  (kiosk, kioskms)
+    start    Start services (kiosk, kioskms)	
+    restart  Start services (kiosk, kioskms)"
+}
+
+root () {
+  if [[ $EUID -ne 0 ]]; then
+    echo " Not running as root"
+     exit 1
+  fi
+}
+
+
+if [[ $# -ne 1 ]]; then
+  help
+  exit 1
+fi
+
+case $1 in
+  rw)
+    root
+    mount -o remount,rw /
+    mount -o remount,rw /boot
+    ;;
+  ro)
+    root
+    mount -o remount,ro /
+    mount -o remount,ro /boot
+    ;;
+  stop|start|restart)
+    root
+    systemctl $1 kiosk
+	systemctl $1 kioskms
+    ;;
+  *)
+    help
+    ;;
+esac

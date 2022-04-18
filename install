@@ -1,0 +1,70 @@
+#!/bin/bash
+
+if [ $(cat /proc/cpuinfo | grep Raspberry | wc -l) -eq 0 ]; then
+  echo "This installation script only applies to Raspberry Pi's"
+  exit 1
+fi
+if [[ $EUID -ne 0 ]]; then
+   echo "This installation script must be run as root" 
+   exit 1
+fi
+echo "This script will install Kiosk on your Raspberry Pi and set the SD storage card to Read-Only"
+read -r -p "Are you sure you want to continue? [y/N] " response
+if ! [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]
+then
+  exit 1
+fi
+
+# Updating and installing packages for Kiosk
+apt-get -y update && apt-get -y upgrade && apt-get -y dist-upgrade
+apt-get -y install xserver-xorg xinit x11-xserver-utils matchbox-window-manager chromium-browser ttf-mscorefonts-installer xdotool unclutter vim
+
+# Updating and installing packages for ReadOnly
+apt-get -y install busybox-syslogd
+apt-get -y remove --purge triggerhappy logrotate dphys-swapfile syslogd
+apt-get -y autoremove --purge
+
+sed -i 's/$/ fastboot noswap ro/g' /boot/cmdline.txt
+sed -i -e 's/defaults,flush/defaults,flush,ro/g' -e 's/defaults,noatime/defaults,noatime,ro/g' /etc/fstab
+cat >> /etc/fstab << EOF
+/dev/sda1 /mnt/usb    vfat  auto,nofail,noatime,users,ro  0 0
+tmpfs /tmp            tmpfs defaults,noatime,nodev,noexec 0 0
+tmpfs /var/lib/dhcpcd tmpfs defaults,noatime,nodev,noexec 0 0
+tmpfs /var/log	      tmpfs defaults,noatime,nodev,noexec 0 0
+tmpfs /home/kiosk     tmpfs defaults,noatime,nodev,noexec 0 0
+EOF
+
+# Installing Kiosk
+echo -e "\ndefine 241 string CPATH\noption CPATH" >>/etc/dhcpcd.conf
+mkdir /mnt/usb
+
+useradd -m kiosk
+sudo usermod -aG audio,video,tty kiosk
+bash -c 'echo -e "allowed_users=anybody\nneeds_root_rights=yes" >/etc/X11/Xwrapper.config'
+
+mkdir -p /opt/kiosk
+cp kiosk /opt/kiosk/
+cp kiosk{ms,ms.html,mr.html} /opt/kiosk/
+cp jquery-3.6.0.min.js /opt/kiosk/
+chown -R kiosk:kiosk /opt/kiosk
+chmod 400 /opt/kiosk/*
+chmod u+x /opt/kiosk/{kiosk,kioskms}
+cp kioskctl /usr/local/bin/
+chmod a+rx /usr/local/bin/kioskctl
+
+cp *.service /etc/systemd/system/
+systemctl enable kiosk
+systemctl enable kioskms
+
+# Finish
+IPATH=$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )
+rm -f $IPATH/*
+rmdir $IPATH
+history -c; echo -n '' > ~/.bash_history
+echo -e "\nInstallation finished"
+read -r -p "Do you want to reboot? [y/N] " response
+if ! [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]
+then
+  exit 1
+fi
+init 6

@@ -1,0 +1,73 @@
+#!/bin/bash
+
+rm -rf /tmp/kiosk
+mkdir -p /tmp/kiosk
+
+# USB sticks are always leading. If there is no USB stick present web download (DHCP option 241 with name CPATH) 
+# will be used. If both the USB stick and a web download are unavailable the system will not work
+USBDRV=$(ls -l /dev/disk/by-uuid/ | grep -v -e mmcblk -e total | rev | cut -d'/' -f1 | rev | tail -n 1)
+if [ ${#USBDRV} -gt 2 ]; then
+  cp -r /mnt/usb/kiosk/* /tmp/kiosk/
+else
+  ISURL='(https?|ftp)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]'
+  DEVUID=$(cat /proc/cpuinfo | grep Serial | tr -d ' ' | cut -d: -f2)
+  WEBPTH=$(for n in $(ip link show | grep mtu | grep -v lo | cut -d: -f2 ); do dhcpcd -U $n 2>/dev/null; done | grep CPATH | head -n 1 | cut -d"'" -f2)
+
+  echo "Downloading config: $WEBPTH/$DEVUID.cfg"
+  curl -s $WEBPTH/$DEVUID.cfg | cut -d# -f1 | sed -e 's/[[:space:]]//g' -e '/^$/d' >/tmp/kiosk/config.cfg
+  CFGMEDIA=$(cat /tmp/kiosk/config.cfg | grep -i media | cut -d= -f2)
+  if [[ $CFGMEDIA =~ $ISURL ]]; then
+    WEBDWN=$CFGMEDIA
+  else
+        WEBDWN=$WEBPTH/$CFGMEDIA
+  fi
+  if [ -z "$WEBDWN" ]; then
+    WEBDWN=$WEBPTH/$DEVUID.tgz;
+  fi
+
+  echo "Downloading media: $WEBDWN"
+  MFILE=$(echo $WEBDWN | rev | cut -d/ -f1 | rev)
+  wget -O /tmp/kiosk/$MFILE $WEBDWN
+  if [ $(wc -c </tmp/kiosk/$MFILE) -gt 0 ]; then
+    cd /tmp/kiosk
+    7z e $MFILE
+  fi
+  rm -f /tmp/kiosk/$MFILE
+fi
+CFGDELAY=$(cat /tmp/kiosk/config.cfg | grep -i delay | cut -d= -f2)
+if ! [[ $CFGDELAY =~ ^[0-9]+$ ]]; then
+  CFGDELAY=30
+fi
+
+# Starting Kiosk
+startx &
+sleep 4
+
+export DISPLAY=:0
+
+xset q
+xset s noblank
+xset s off
+xset -dpms
+
+unclutter -idle 0.5 -root &
+
+cp /opt/kiosk/{*.js,kioskms.html} /tmp/kiosk/
+export IFS=$'\n'
+for FILE in /tmp/kiosk/*.url; do
+  cat /opt/kiosk/kioskmr.html | sed "s~%%URL~$(cat $FILE | grep -i url | tr -d ' ' | cut -d= -f2)~g" >$(echo $FILE | rev | cut -d/ -f1 | rev | sed 's/.url$/.html/g' | sed 's~^~/tmp/kiosk/~g')
+done
+FILES=($(ls -1v /tmp/kiosk | grep -iE '.html$|.mp4$|.jpg$|.png$' | grep -v 'kioskms.html' | sed 's/.*.mp4$/kioskms.html?&/' | sed 's/^/\/tmp\/kiosk\//g' | sed 's/.*.mp4$/file:\/\/&/'))
+/usr/bin/chromium-browser \
+  --noerrdialogs --disable-infobars --kiosk --enable-consumer-kiosk --start-maximized --process-per-tab --hide-scrollbars \
+  --disable-backing-store-limit --disable-background-media-suspend --disable-backgrounding-occluded-windows \
+  ${FILES[@]} &
+
+while true; do
+  sleep $CFGDELAY
+  xdotool key ctrl+r
+  sleep 0.5
+  xdotool key ctrl+Tab
+  sleep 0.5
+  xdotool key Return
+done

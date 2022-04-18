@@ -1,0 +1,13 @@
+[Unit]
+Description=RPi Kiosk
+After=multi-user.target
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/bin/bash /opt/kiosk/kiosk
+User=kiosk
+Group=kiosk
+
+[Install]
+WantedBy=multi-user.target
