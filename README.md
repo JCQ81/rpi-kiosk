@@ -27,3 +27,6 @@ Kiosk system for the Raspberry Pi. Build and tested on Raspberry Pi 3 running Ra
 				- Delay between screens
 		- Media package
 			- Archive file (.tgz/.zip/.7z) containing media files
+ - OS:
+ 	- Set filesystem to ReadOnly for extending SD lifespan
+ 	- To make changes, disable ReadOnly (active until reboot): *kioskctl rw*
