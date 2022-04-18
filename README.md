@@ -20,4 +20,8 @@ Kiosk system for the Raspberry Pi. Build and tested on Raspberry Pi 3 running Ra
 	 - USB stick (path: /kiosk)
 	 - HTTP provisioning
 		 - Path from DHCP option 241 with name CPATH
-		 - Configuration file containing path to media package and delay between screens (see example file)
+		 - Configuration file 
+		 	- Filename: [serialnumber].cfg (*cat /proc/cpuinfo | grep Serial*)
+		 	- Content: (see example file)
+		 		- Path to media package 
+				- Delay between screens
