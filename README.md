@@ -16,7 +16,7 @@ Kiosk system for the Raspberry Pi. Build and tested on Raspberry Pi 3 running Ra
 	 - Images: .jpg / .png
 	 - Videos: .mp4
 	 - Websites: .html / .url (windows web link)
- - Media sources:
+ - Media source options:
 	 - USB stick (path: /kiosk)
 	 - HTTP provisioning
 		 - Path from DHCP option 241 with name CPATH
