@@ -25,3 +25,5 @@ Kiosk system for the Raspberry Pi. Build and tested on Raspberry Pi 3 running Ra
 		 	- Content: (see example file)
 		 		- Path to media package 
 				- Delay between screens
+		- Media package
+			- Archive file (.tgz/.zip/.7z) containing media files
