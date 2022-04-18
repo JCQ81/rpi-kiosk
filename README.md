@@ -5,8 +5,8 @@ Kiosk system for the Raspberry Pi. Build and tested on Raspberry Pi 3 running Ra
 **Installation:**
 
     sudo apt-get -y install git
-    mkdir ~\kiosk-setup
-    cd ~\kiosk-setup
+    mkdir ~/kiosk-setup
+    cd ~/kiosk-setup
     git clone https://github.com/JCQ81/rpi-kiosk.git
     sudo chmod +x install
     sudo ./install
